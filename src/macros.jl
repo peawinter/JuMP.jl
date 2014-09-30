@@ -16,15 +16,24 @@ end
 #       idxvars:  Index names used in referencing, e.g.g {:i,:j,:k}
 #       idxsets:  Index sets for indexing, e.g. {1:3, [:red,:blue], S}
 #       idxpairs: Vector of IndexPair
-function buildrefsets(c::Expr)
+#       condition: Expr containing any conditional present for indexing
+function buildrefsets(expr::Expr)
+    c = copy(expr)
     isexpr(c,:ref) || error("Unrecognized name in construction macro; expected $(string(c)) to be of the form name[...]")
     idxvars = Any[]
     idxsets = Any[]
     idxpairs = IndexPair[]
     # Creating an indexed set of refs
-    cname = c.args[1]
+    cname = shift!(c.args)
     refcall = Expr(:ref,esc(cname))
-    for s in c.args[2:end]
+    if isexpr(c.args[1], :parameters)
+        length(c.args[1].args) == 1 ||
+            error("Only one conditional may be used; try chaining them with &&")
+        condition = shift!(c.args).args[1]
+    else
+        condition = :()
+    end
+    for s in c.args
         if isa(s,Expr) && (s.head == :(=) || s.head == :in)
             idxvar = s.args[1]
             idxset = esc(s.args[2])
@@ -38,11 +47,11 @@ function buildrefsets(c::Expr)
         push!(idxsets, idxset)
         push!(refcall.args, esc(idxvar))
     end
-    return refcall, idxvars, idxsets, idxpairs
+    return refcall, idxvars, idxsets, idxpairs, condition
 end
 
-buildrefsets(c::Symbol)  = (esc(c), Any[], Any[], IndexPair[])
-buildrefsets(c::Nothing) = (gensym(), Any[], Any[], IndexPair[])
+buildrefsets(c::Symbol)  = (esc(c), Any[], Any[], IndexPair[], :())
+buildrefsets(c::Nothing) = (gensym(), Any[], Any[], IndexPair[], :())
 
 ###############################################################################
 # getloopedcode
@@ -127,7 +136,8 @@ macro addConstraint(m, x, extra...)
 
     # Strategy: build up the code for non-macro addconstraint, and if needed
     # we will wrap in loops to assign to the ConstraintRefs
-    refcall, idxvars, idxsets, idxpairs = buildrefsets(c)
+    crefflag = isa(c,Expr)
+    refcall, idxvars, idxsets, idxpairs, condition = buildrefsets(c)
     # Build the constraint
     if length(x.args) == 3
         # Simple comparison - move everything to the LHS
@@ -169,7 +179,7 @@ macro addConstraint(m, x, extra...)
               "       expr1 == expr2\n" * "       lb <= expr <= ub")
     end
 
-    return assert_validmodel(m, getloopedcode(c, code, :(), idxvars, idxsets, idxpairs, :ConstraintRef))
+    return assert_validmodel(m, getloopedcode(c, code, condition, idxvars, idxsets, idxpairs, :ConstraintRef))
 end
 
 for (mac,sym) in [(:addConstraints,  symbol("@addConstraint")),
@@ -235,7 +245,7 @@ macro defExpr(args...)
     end
 
     crefflag = isa(c,Expr)
-    refcall, idxvars, idxsets, idxpairs = buildrefsets(c)
+    refcall, idxvars, idxsets, idxpairs, condition = buildrefsets(c)
     newaff, parsecode = parseExpr(x, :q, [1.0])
     code = quote
         q = AffExpr()
@@ -243,8 +253,7 @@ macro defExpr(args...)
         $crefflag && !isa($newaff,AffExpr) && error("Three argument form of @defExpr does not currently support quadratic expressions")
         $(refcall) = $newaff
     end
-
-    return getloopedcode(c, code, :(), idxvars, idxsets, idxpairs, :AffExpr)
+    return getloopedcode(c, code, condition, idxvars, idxsets, idxpairs, :AffExpr)
 end
 
 function hasdependentsets(idxvars, idxsets)
@@ -282,27 +291,9 @@ esc_nonconstant(x) = esc(x)
 macro defVar(args...)
     length(args) <= 1 &&
         error("in @defVar ($var): expected model as first argument, then variable information.")
-    ######################################################################
-    # # TODO: remove commented lines below when x[i,j;k,l] is valid syntax
-    # if isa(args[1], Expr) && args[1].head == :parameters
-    #     @assert length(args[1].args) == 1
-    #     # push!(condition, args[1].args[1])
-    #     condition = (args[1].args[1],)
-    #     m = args[2]
-    #     x = args[3]
-    #     extra = args[4:end]
-    # else
-    #     m = args[1]
-    #     x = args[2]
-    #     extra = args[3:end]
-    # end
-    ######################################################################
-    # ...and replace the following:
-    condition = :()
     m = args[1]
     x = args[2]
     extra = vcat(args[3:end]...)
-    ######################################################################
     m = esc(m)
 
     t = :Cont
@@ -449,7 +440,7 @@ macro defVar(args...)
 
     # We now build the code to generate the variables (and possibly the JuMPDict
     # to contain them)
-    refcall, idxvars, idxsets, idxpairs = buildrefsets(var)
+    refcall, idxvars, idxsets, idxpairs, condition = buildrefsets(var)
     code = :( $(refcall) = Variable($m, $lb, $ub, $(quot(t)), "", $value) )
     looped = getloopedcode(var, code, condition, idxvars, idxsets, idxpairs, :Variable)
     varname = esc(getname(var))
