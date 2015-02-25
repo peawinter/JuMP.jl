@@ -324,6 +324,148 @@ context("dot") do
 end
 end
 
+module TestHelper # weird scoping behavior with FactCheck...
+    using JuMP
+    _lt(x,y) = (x.col < y.col)
+    function sort_expr!(x::AffExpr)
+        idx = sortperm(x.vars, lt=_lt)
+        x.vars = x.vars[idx]
+        x.coeffs = x.coeffs[idx]
+        return x
+    end
+
+    vec_eq(x,y) = vec_eq([x;], [y;])
+
+    function vec_eq(x::Array, y::Array)
+        size(x) == size(y) || return false
+        for i in 1:length(x)
+            v, w = convert(AffExpr,x[i]), convert(AffExpr,y[i])
+            sort_expr!(v)
+            sort_expr!(w)
+            affToStr(v) == affToStr(w) || return false
+        end
+        return true
+    end
+
+    function vec_eq(x::Array{QuadExpr}, y::Array{QuadExpr})
+        size(x) == size(y) || return false
+        for i in 1:length(x)
+            quadToStr(x[i]) == quadToStr(y[i]) || return false
+        end
+        return true
+    end
+end
+
+facts("Vectorized operations") do
+
+context("Transpose") do
+    m = Model()
+    @defVar(m, x[1:3])
+    @defVar(m, y[1:2,1:3])
+    @defVar(m, z[2:5])
+    @fact TestHelper.vec_eq(x', [x[1] x[2] x[3]]) => true
+    @fact TestHelper.vec_eq(transpose(x), [x[1] x[2] x[3]]) => true
+    @fact TestHelper.vec_eq(y', [y[1,1] y[2,1]
+                      y[1,2] y[2,2]
+                      y[1,3] y[2,3]]) => true
+    @fact TestHelper.vec_eq(transpose(y),
+                [y[1,1] y[2,1]
+                 y[1,2] y[2,2]
+                 y[1,3] y[2,3]]) => true
+    @fact_throws z'
+    @fact_throws transpose(z)
+end
+
+context("Vectorized arithmetic") do
+    m = Model()
+    @defVar(m, x[1:3])
+    A = [2 1 0
+         1 2 1
+         0 1 2]
+    @fact TestHelper.vec_eq(A*x, [2x[1] +  x[2]
+                        2x[2] + x[1] + x[3]
+                        x[2] + 2x[3]]) => true
+    @fact TestHelper.vec_eq(x'*A, [2x[1]+x[2]; 2x[2]+x[1]+x[3]; x[2]+2x[3]]') => true
+    @fact TestHelper.vec_eq(x'*A*x, [2x[1]*x[1] + 2x[1]*x[2] + 2x[2]*x[2] + 2x[2]*x[3] + 2x[3]*x[3]]) => true
+
+    y = A*x
+    @fact TestHelper.vec_eq(-x, [-x[1], -x[2], -x[3]]) => true
+    @fact TestHelper.vec_eq(-y, [-2x[1] -  x[2]
+                       -x[1] - 2x[2] -  x[3]
+                               -x[2] - 2x[3]]) => true
+    @fact TestHelper.vec_eq(y + 1, [2x[1] +  x[2]         + 1
+                          x[1] + 2x[2] +  x[3] + 1
+                                  x[2] + 2x[3] + 1]) => true
+    @fact TestHelper.vec_eq(y - 1, [2x[1] +  x[2]         - 1
+                          x[1] + 2x[2] +  x[3] - 1
+                                  x[2] + 2x[3] - 1]) => true
+    @fact TestHelper.vec_eq(y + 2ones(3), [2x[1] +  x[2]         + 2
+                                 x[1] + 2x[2] +  x[3] + 2
+                                         x[2] + 2x[3] + 2]) => true
+    @fact TestHelper.vec_eq(y - 2ones(3), [2x[1] +  x[2]         - 2
+                                 x[1] + 2x[2] +  x[3] - 2
+                                         x[2] + 2x[3] - 2]) => true
+    @fact TestHelper.vec_eq(2ones(3) + y, [2x[1] +  x[2]         + 2
+                                 x[1] + 2x[2] +  x[3] + 2
+                                         x[2] + 2x[3] + 2]) => true
+    @fact TestHelper.vec_eq(2ones(3) - y, [-2x[1] -  x[2]         + 2
+                                 -x[1] - 2x[2] -  x[3] + 2
+                                         -x[2] - 2x[3] + 2]) => true
+    @fact TestHelper.vec_eq(y + x, [3x[1] +  x[2]
+                          x[1] + 3x[2] +  x[3]
+                                  x[2] + 3x[3]]) => true
+    @fact TestHelper.vec_eq(x + y, [3x[1] +  x[2]
+                          x[1] + 3x[2] +  x[3]
+                                  x[2] + 3x[3]]) => true
+    @fact TestHelper.vec_eq(2y + 2x, [6x[1] + 2x[2]
+                           2x[1] + 6x[2] + 2x[3]
+                                   2x[2] + 6x[3]]) => true
+    @fact TestHelper.vec_eq(y - x, [ x[1] + x[2]
+                          x[1] + x[2] + x[3]
+                                 x[2] + x[3]]) => true
+    @fact TestHelper.vec_eq(x - y, [-x[1] - x[2]
+                         -x[1] - x[2] - x[3]
+                                -x[2] - x[3]]) => true
+    @fact TestHelper.vec_eq(y + x[:], [3x[1] +  x[2]
+                             x[1] + 3x[2] +  x[3]
+                                     x[2] + 3x[3]]) => true
+    @fact TestHelper.vec_eq(x[:] + y, [3x[1] +  x[2]
+                             x[1] + 3x[2] +  x[3]
+                                     x[2] + 3x[3]]) => true
+end
+
+context("Vectorized comparisons") do
+    m = Model()
+    @defVar(m, x[1:3])
+    A = [1 2 3
+         0 4 5
+         6 0 7]
+    @addConstraint(m, x'*A*x >= 1)
+    @fact TestHelper.vec_eq(m.quadconstr[1].terms, [x[1]*x[1] + 2x[1]*x[2] + 4x[2]*x[2] + 9x[1]*x[3] + 5x[2]*x[3] + 7x[3]*x[3] - 1]) => true
+    @fact m.quadconstr[1].sense => :(>=)
+    @addConstraint(m, (x'A)' + 2A*x <= 1)
+    terms = map(v->v.terms, m.linconstr)
+    lbs   = map(v->v.lb, m.linconstr)
+    ubs   = map(v->v.ub, m.linconstr)
+    @fact TestHelper.vec_eq(terms, -[ 3x[1] + 12x[3] +  4x[2] - 1
+                                 2x[1] + 12x[2] + 10x[3] - 1
+                                15x[1] +  5x[2] + 21x[3] - 1]) => true
+    @fact lbs => fill(Inf, 3)
+    @fact ubs => fill(  0, 3)
+
+    # @addConstraint(m, -1 <= (x'A)' + 2A*x <= 1)
+    # terms = map(v->v.terms, m.linconstr)
+    # lbs   = map(v->lb, m.linconstr)
+    # ubs   = map(v->ub, m.linconstr)
+    # @fact TestHelper.vec_eq(m.linconstr, [ 3x[1] + 12x[3] +  4x[2]
+    #                             2x[1] + 12x[2] + 10x[3]
+    #                            15x[1] +  5x[2] + 21x[3]]) => true
+    # @fact lbs => fill(-1, 3)
+    # @fact ubs => fill( 1, 3)
+end
+
+end
+
 
 # The behavior in this test is no longer well-defined
 #let

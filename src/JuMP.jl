@@ -368,6 +368,10 @@ typealias QuadExpr GenericQuadExpr{Float64,Variable}
 QuadExpr() = QuadExpr(Variable[],Variable[],Float64[],AffExpr())
 
 Base.isempty(q::QuadExpr) = (length(q.qvars1) == 0 && isempty(q.aff))
+Base.zero{C,V}(::Type{GenericQuadExpr{C,V}}) = GenericQuadExpr(V[], V[], C[], one(GenericAffExpr{C,V}))
+Base.one{C,V}(::Type{GenericQuadExpr{C,V}})  = GenericQuadExpr(V[], V[], C[], zero(GenericAffExpr{C,V}))
+Base.zero(q::GenericQuadExpr) = zero(typeof(q))
+Base.one(q::GenericQuadExpr)  = one(typeof(q))
 
 function assert_isfinite(q::GenericQuadExpr)
     assert_isfinite(q.aff)
@@ -471,6 +475,8 @@ function addConstraint(m::Model, c::LinearConstraint)
     end
     return ConstraintRef{LinearConstraint}(m,length(m.linconstr))
 end
+
+addConstraint(m::Model, v::Vector{LinearConstraint}) = map(c->addConstraint(m,c), v)
 
 # Copy utility function, not exported
 function Base.copy(c::LinearConstraint, new_model::Model)
@@ -580,6 +586,8 @@ function addConstraint(m::Model, c::QuadConstraint)
     end
     return ConstraintRef{QuadConstraint}(m,length(m.quadconstr))
 end
+
+addConstraint(m::Model, v::Vector{QuadConstraint}) = map(c->addConstraint(m,c), v)
 
 # Copy utility function
 function Base.copy(c::QuadConstraint, new_model::Model)

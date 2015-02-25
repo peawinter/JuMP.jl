@@ -164,7 +164,7 @@ macro addConstraint(m, x, extra...)
         sense in valid_senses ||
             error("in @addConstraint ($(string(x))): expected comparison operator (<=, >=, or ==).")
         lhs = :($(x.args[1]) - $(x.args[3]))
-        newaff, parsecode = parseExpr(lhs, :q, [1.0])
+        newaff, parsecode = parseExprToplevel(lhs, :q)
         code = quote
             q = AffExpr()
             $parsecode
@@ -177,7 +177,7 @@ macro addConstraint(m, x, extra...)
         end
         lb = x.args[1]
         ub = x.args[5]
-        newaff, parsecode = parseExpr(x.args[3],:aff, [1.0])
+        newaff, parsecode = parseExprToplevel(x.args[3],:aff)
         code = quote
             aff = AffExpr()
             if !isa($(esc(lb)),Number)
@@ -186,9 +186,9 @@ macro addConstraint(m, x, extra...)
                 error(string("in @addConstraint (",$(string(x)),"): expected ",$(string(ub))," to be a number."))
             end
             $parsecode
+            isa($newaff,AffExpr) || (eltype($newaff) == AffExpr) || error("Ranged quadratic constraints are not allowed")
             offset = $newaff.constant
             $newaff.constant = 0.0
-            isa($newaff,AffExpr) || error("Ranged quadratic constraints are not allowed")
             $(refcall) = addConstraint($m, LinearConstraint($newaff,$(esc(lb))-offset,$(esc(ub))-offset))
         end
     else
@@ -336,7 +336,7 @@ macro setObjective(m, args...)
     if sense == :Min || sense == :Max
         sense = Expr(:quote,sense)
     end
-    newaff, parsecode = parseExpr(x, :q, [1.0])
+    newaff, parsecode = parseExprToplevel(x, :q)
     code = quote
         q = AffExpr()
         $parsecode
@@ -357,7 +357,7 @@ macro defExpr(args...)
     end
 
     refcall, idxvars, idxsets, idxpairs = buildrefsets(c)
-    newaff, parsecode = parseExpr(x, :q, [1.0])
+    newaff, parsecode = parseExprToplevel(x, :q)
     code = quote
         q = AffExpr()
         $parsecode
