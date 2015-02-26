@@ -476,7 +476,7 @@ function addConstraint(m::Model, c::LinearConstraint)
     return ConstraintRef{LinearConstraint}(m,length(m.linconstr))
 end
 
-addConstraint(m::Model, v::Vector{LinearConstraint}) = map(c->addConstraint(m,c), v)
+addConstraint(m::Model, v::Array{LinearConstraint}) = map(c->addConstraint(m,c), v)
 
 # Copy utility function, not exported
 function Base.copy(c::LinearConstraint, new_model::Model)
@@ -587,7 +587,7 @@ function addConstraint(m::Model, c::QuadConstraint)
     return ConstraintRef{QuadConstraint}(m,length(m.quadconstr))
 end
 
-addConstraint(m::Model, v::Vector{QuadConstraint}) = map(c->addConstraint(m,c), v)
+addConstraint(m::Model, v::Array{QuadConstraint}) = map(c->addConstraint(m,c), v)
 
 # Copy utility function
 function Base.copy(c::QuadConstraint, new_model::Model)

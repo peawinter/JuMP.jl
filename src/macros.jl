@@ -139,6 +139,8 @@ function _construct_constraint!(quad::QuadExpr, sense::Symbol)
     return QuadConstraint(quad, sense)
 end
 
+_construct_constraint!(x::Array, sense::Symbol) = map(c->_construct_constraint!(c,sense), x)
+
 macro addConstraint(m, x, extra...)
     m = esc(m)
     # Two formats:
