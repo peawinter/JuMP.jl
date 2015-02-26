@@ -258,14 +258,31 @@ function Base.dot{N}(lhs::JuMPArray{Float64,N},rhs::JuMPArray{Float64,N})
 end
 
 Base.promote_type(::Type{Variable},::Type{Union()})  = Variable
+Base.promote_type(::Type{Union()},::Type{Variable})  = Variable
+
 Base.promote_type{R<:Real}(::Type{Variable},::Type{R})  = AffExpr
+Base.promote_type{R<:Real}(::Type{R},::Type{Variable})  = AffExpr
+
 Base.promote_type(::Type{Variable},::Type{AffExpr})  = AffExpr
+Base.promote_type(::Type{AffExpr},::Type{Variable})  = AffExpr
+
 Base.promote_type(::Type{Variable},::Type{QuadExpr}) = QuadExpr
+Base.promote_type(::Type{QuadExpr},::Type{Variable}) = QuadExpr
+
 Base.promote_type(::Type{AffExpr},::Type{Union()})  = AffExpr
+Base.promote_type(::Type{Union()},::Type{AffExpr})  = AffExpr
+
 Base.promote_type{R<:Real}(::Type{AffExpr},::Type{R})   = AffExpr
+Base.promote_type{R<:Real}(::Type{R},::Type{AffExpr})   = AffExpr
+
 Base.promote_type(::Type{AffExpr},::Type{QuadExpr}) = QuadExpr
-Base.promote_type(::Type{QuadExpr},::Type{Union()})  =QuadExpr
+Base.promote_type(::Type{QuadExpr},::Type{AffExpr}) = QuadExpr
+
+Base.promote_type(::Type{QuadExpr},::Type{Union()})  = QuadExpr
+Base.promote_type(::Type{Union()},::Type{QuadExpr})  = QuadExpr
+
 Base.promote_type{R<:Real}(::Type{QuadExpr},::Type{R})  = QuadExpr
+Base.promote_type{R<:Real}(::Type{R},::Type{QuadExpr})  = QuadExpr
 
 _throw_transpose_error() = error("Transpose not currently implemented for JuMPArrays with arbitrary index sets.")
 
@@ -335,6 +352,8 @@ typealias JuMPTypes Union(Variable,AffExpr,QuadExpr)
 
 (*){R,N}(lhs::AbstractArray, rhs::JuMPArray{R,N,true}) = (*)(full(lhs), rhs.innerArray)
 (*){R,N}(lhs::JuMPArray{R,N,true}, rhs::AbstractArray) = (*)(lhs.innerArray, full(rhs))
+(*){T<:JuMPTypes}(lhs::SparseMatrixCSC, rhs::Array{T}) = (*)(full(lhs),rhs)
+(*){T<:JuMPTypes}(lhs::Array{T}, rhs::SparseMatrixCSC) = (*)(lhs,full(rhs))
 
 function (*){T,R<:JuMPTypes}(A::Array{T,2}, x::Array{R,1})
     m, n = size(A,1), size(A,2)
@@ -422,23 +441,23 @@ end
 #############################################################################
 # JuMPDict comparison operators (all errors)
 
-for sgn in (:<=, :(==), :>=)
-    @eval begin
-        function $sgn{T<:JuMPTypes,S<:JuMPTypes}(lhs::Vector{T},rhs::Vector{S})
-            (N = length(lhs)) == length(rhs) || error("Unequal lengths in constraint")
-            return map(1:N) do k
-                $sgn(lhs[k],rhs[k])
-            end
-        end
-        $sgn{T<:JuMPTypes,R<:Real}(lhs::Vector{T},rhs::Vector{R}) = $sgn(lhs,convert(Vector{AffExpr},rhs))
-        $sgn{T<:JuMPTypes,R<:Real}(lhs::Vector{R},rhs::Vector{T}) = $sgn(convert(Vector{AffExpr},lhs),rhs)
-        $sgn{T<:JuMPTypes}(lhs::Vector{T},rhs::Real) = $sgn(lhs,[AffExpr(rhs) for _ in 1:length(lhs)])
-        $sgn{T<:JuMPTypes}(lhs::Real,rhs::Vector{T}) = $sgn([AffExpr(lhs) for _ in 1:length(rhs)],rhs)
-        $sgn{T<:JuMPTypes}(lhs::Real,rhs::Array{T}) = $sgn(lhs, vec(rhs))
-        $sgn{T<:JuMPTypes}(lhs::Array{T},rhs::Real) = $sgn(rhs, vec(lhs))
-        $sgn{T<:JuMPTypes,R<:JuMPTypes}(lhs::Array{T},rhs::Array{R}) = $sgn(vec(lhs), vec(rhs))
-    end
-end
+# for sgn in (:<=, :(==), :>=)
+#     @eval begin
+#         function $sgn{T<:JuMPTypes,S<:JuMPTypes}(lhs::Vector{T},rhs::Vector{S})
+#             (N = length(lhs)) == length(rhs) || error("Unequal lengths in constraint")
+#             return map(1:N) do k
+#                 $sgn(lhs[k],rhs[k])
+#             end
+#         end
+#         $sgn{T<:JuMPTypes,R<:Real}(lhs::Vector{T},rhs::Vector{R}) = $sgn(lhs,convert(Vector{AffExpr},rhs))
+#         $sgn{T<:JuMPTypes,R<:Real}(lhs::Vector{R},rhs::Vector{T}) = $sgn(convert(Vector{AffExpr},lhs),rhs)
+#         $sgn{T<:JuMPTypes}(lhs::Vector{T},rhs::Real) = $sgn(lhs,[AffExpr(rhs) for _ in 1:length(lhs)])
+#         $sgn{T<:JuMPTypes}(lhs::Real,rhs::Vector{T}) = $sgn([AffExpr(lhs) for _ in 1:length(rhs)],rhs)
+#         $sgn{T<:JuMPTypes}(lhs::Real,rhs::Array{T}) = $sgn(lhs, vec(rhs))
+#         $sgn{T<:JuMPTypes}(lhs::Array{T},rhs::Real) = $sgn(rhs, vec(lhs))
+#         $sgn{T<:JuMPTypes,R<:JuMPTypes}(lhs::Array{T},rhs::Array{R}) = $sgn(vec(lhs), vec(rhs))
+#     end
+# end
 
 ###############################################################################
 # Add nonlinear function fallbacks for JuMP built-in types

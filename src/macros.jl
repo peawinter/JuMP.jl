@@ -182,11 +182,10 @@ macro addConstraint(m, x, extra...)
         newaff, parsecode = parseExprToplevel(x.args[3],:aff)
         code = quote
             aff = AffExpr()
-            if !isa($(esc(lb)),Number)
+            isa($(esc(lb)),Number) || (eltype($(esc(lb))) <: Number) ||
                 error(string("in @addConstraint (",$(string(x)),"): expected ",$(string(lb))," to be a number."))
-            elseif !isa($(esc(ub)),Number)
+            isa($(esc(ub)),Number) || (eltype($(esc(ub))) <: Number) ||
                 error(string("in @addConstraint (",$(string(x)),"): expected ",$(string(ub))," to be a number."))
-            end
             $parsecode
             isa($newaff,AffExpr) || (eltype($newaff) == AffExpr) || error("Ranged quadratic constraints are not allowed")
             offset = $newaff.constant
