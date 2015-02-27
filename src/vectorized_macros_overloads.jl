@@ -8,6 +8,7 @@ addToExpression{T}(x, y::JuMPArray{T,1,true}, z::Real) = addToExpression(x, y.in
 typealias VectTypes Union(JuMPTypes,Real)
 
 addToExpression(x, y, z::SparseMatrixCSC) = addToExpression(x, y, full(z)) # lol
+addToExpression(x, y::SparseMatrixCSC, z::SparseMatrixCSC) = addToExpression(x, full(y), full(z))
 addToExpression(x, y::SparseMatrixCSC, z) = addToExpression(x, full(y), z)
 
 addToExpression{T<:JuMPTypes}(x::Vector{T}, y::Real, z::Real) = (x + y*z)
