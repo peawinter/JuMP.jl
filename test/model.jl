@@ -469,6 +469,62 @@ context("With solver $(typeof(solver))") do
     @fact getObjectiveValue(m) => roughly(3.0, 1e-6)
 end; end; end
 
+facts("[model] Test vectorized model creation") do
+
+    A = sprand(50,10,0.15)
+    B = sprand(50, 7,0.2)
+    modV = Model()
+    @defVar(modV, x[1:10])
+    @defVar(modV, y[1:7])
+    @addConstraint(modV, A*x + B*y .<= 1)
+    @setObjective(modV, Max, (x'*2A')*(2A*x) + (B*2y)'*(B*(2y)))
+
+    modS = Model()
+    @defVar(modS, x[1:10])
+    @defVar(modS, y[1:7])
+    for i in 1:50
+        @addConstraint(modS, sum{A[i,j]*x[j], j=1:10} + sum{B[i,k]*y[k], k=1:7} <= 1)
+    end
+    AA, BB = 4A'*A, 4B'*A
+    @setObjective(modS, Max, sum{AA[i,j]*x[i]*x[j], i=1:10,j=1:10} + sum{BB[i,j]*y[i]*y[j], i=1:7, j=1:7})
+
+    @fact JuMP.prepConstrMatrix(modV) => JuMP.prepConstrMatrix(modS)
+    @fact JuMP.prepProblemBounds(modV) => JuMP.prepProblemBounds(modS)
+end
+
+facts("[model] Test MIQP vectorization") do
+    n = 1000
+    p = 4
+    function bestsubset(solver,X,y,K,M,integer=true)
+        mod = Model(solver=solver)
+        @defVar(mod, β[1:p])
+        if integer
+            @defVar(mod, z[1:p], Bin)
+        else
+            @defVar(mod, 0 <= z[1:p] <= 1)
+        end
+        @setObjective(mod, Min, sum((y-X*β).^2))
+        # or maybe
+        @setObjective(mod, Min, (y-X*β)'*(y-X*β) )
+        @addConstraint(mod, eye(p)*β .<=  M*eye(p)*z)
+        @addConstraint(mod, eye(p)*β .>= -M*eye(p)*z)
+        @addConstraint(mod, sum(z) == K)
+        solve(mod)
+        return getValue(β)[:]
+    end
+    # for solver in ip_solvers
+    #     srand(1000)
+    #     X = rand(n,p)
+    #     y = X * [100, 50, 10, 1] + 20*randn(n)
+    #     @fact bestsubset(solver,X,y,2,500) => roughly([106.25,53.7799,0.0,0.0], 1e-6)
+    # end
+    for solver in quad_mip_solvers
+        include(joinpath("data","miqp_vector.jl")) # loads X and q
+        y = X * [100, 50, 10, 1] + 20*q
+        @fact bestsubset(solver,X,y,2,500) => roughly([106.25,53.7799,0.0,0.0], 1e-6)
+    end
+end
+
 facts("[model] Test setSolver") do
     m = Model()
     @defVar(m, x[1:5])

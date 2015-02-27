@@ -138,6 +138,8 @@ stagedfunction addToExpression_reorder(ex, args...)
     if n_var == 0 && !has_quad
         #println("No variables")
         # println(:(addToExpression(ex, 1.0, (*)(args...))))
+        # println("ex = $ex")
+        # println("args = $args")
         return :(addToExpression(ex, 1.0, (*)(args...)))
     elseif n_var == 1 && !has_quad # linear
         #println("Linear")
@@ -272,18 +274,17 @@ function parseExpr(x, aff::Symbol, lcoeffs::Vector, rcoeffs::Vector, newaff::Sym
             # (x+y)*(x+y)
             n_expr = mapreduce(is_complex_expr, +, x.args)
             if n_expr == 1 # special case, only recurse on one argument and don't create temporary objects
-                lcoeffs = Any[c for c in lcoeffs]
-                rcoeffs = Any[c for c in rcoeffs]
+                # lcoeffs = Any[c for c in lcoeffs]
+                # rcoeffs = Any[c for c in rcoeffs]
                 which_idx = 0
                 for i in 2:length(x.args)
                     if is_complex_expr(x.args[i])
                         which_idx = i
-                    else
-                        unshift!(lcoeffs, 1.0)
-                        push!(rcoeffs, esc(x.args[i]))
                     end
                 end
-                return parseExpr(x.args[which_idx], aff, lcoeffs, rcoeffs, newaff)
+                return parseExpr(x.args[which_idx], aff, vcat(lcoeffs, [esc(x.args[i]) for i in 2:(which_idx-1)]),
+                                                         vcat(rcoeffs, [esc(x.args[i]) for i in (which_idx+1):length(x.args)]),
+                                                         newaff)
             else
                 blk = Expr(:block)
                 for i in 2:length(x.args)

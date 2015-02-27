@@ -1,4 +1,4 @@
-addToExpression(x, y::Vector{Variable}, z) = addToExpression(x, z, y)
+# addToExpression(x, y::Vector{Variable}, z) = addToExpression(x, z, y)
 # addToExpression(x, y, z::Vector{Variable}) = addToExpression(x, y, convert(AffExpr,z))
 
 addToExpression{T}(x, y::Real, z::JuMPArray{T,1,true}) = addToExpression(x, y, z.innerArray)
@@ -7,12 +7,17 @@ addToExpression{T}(x, y::JuMPArray{T,1,true}, z::Real) = addToExpression(x, y.in
 
 typealias VectTypes Union(JuMPTypes,Real)
 
+addToExpression(x, y, z::SparseMatrixCSC) = addToExpression(x, y, full(z)) # lol
+addToExpression(x, y::SparseMatrixCSC, z) = addToExpression(x, full(y), z)
+
 addToExpression{T<:JuMPTypes}(x::Vector{T}, y::Real, z::Real) = (x + y*z)
 
-function addToExpression{T<:VectTypes,N}(x::Number, y::Real, z::Array{T,N})
+function addToExpression{T<:JuMPTypes,N}(x::Number, y::Real, z::Array{T,N})
     v = convert(Array{promote_type(T,AffExpr),N}, copy(z)) # lift T=Variable to AffExpr
     return x + y.*v
 end
+
+addToExpression{R<:Number}(x::Number, y::Real, z::Array{R}) = x + y.*z
 
 addToExpression{T<:VectTypes}(x::Array{T}, y::Real, z::Real) = x + (y*z)
 

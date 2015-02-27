@@ -291,7 +291,9 @@ Base.transpose{T,N}(x::JuMPArray{T,N,false})  = _throw_transpose_error()
 Base.ctranspose{T,N}(x::JuMPArray{T,N,true}) = ctranspose(x.innerArray)
 Base.ctranspose{T,N}(x::JuMPArray{T,N,false})  = _throw_transpose_error()
 
-_iszero(x::AffExpr) = isempty(x.vars) && isempty(x.coeffs) && (x.constant == 0)
+_iszero(x::Variable) = false
+_iszero(x::AffExpr)  = isempty(x.vars) && isempty(x.coeffs) && (x.constant == 0)
+_iszero(x::QuadExpr) = isempty(x.qvars1) && isempty(x.qvars2) && isempty(x.qcoeffs) && _iszero(x.aff)
 _iszero(x) = (x == 0)
 
 function multiply!(ret, A, x)
@@ -306,6 +308,8 @@ function multiply!(ret::Array{AffExpr}, lhs, rhs)
     m, n = size(lhs,1), size(lhs,2)
     r, s = size(rhs,1), size(rhs,2)
     n == r || error("Incompatible dimensions")
+    p, q = size(ret,1), size(ret,2)
+    (p == m && q == s) || error("Incompatible dimensions")
     for i in 1:m, j in 1:s
         aff = AffExpr()
         sizehint!(aff.vars, n)
@@ -323,18 +327,22 @@ function multiply!(ret::Array{AffExpr}, lhs, rhs)
     return ret
 end
 
-function multiply!(ret::Array{QuadExpr}, A, x)
-    m, n = size(A,1), size(A,2)
-    for i in 1:m
+function multiply!(ret::Array{QuadExpr}, lhs, rhs)
+    m, n = size(lhs,1), size(lhs,2)
+    r, s = size(rhs,1), size(rhs,2)
+    n == r || error("Incompatible dimensions")
+    p, q = size(ret,1), size(ret,2)
+    (p == m && q == s) || error("Incompatible dimensions")
+    for i in 1:m, j in 1:s
         q = QuadExpr()
         sizehint!(q.qvars2, n)
         sizehint!(q.qvars2, n)
         sizehint!(q.qcoeffs, n)
         sizehint!(q.aff.vars, n)
         sizehint!(q.aff.coeffs, n)
-        for j in 1:n
-            if !_iszero(A[i,j])
-                tmp = convert(QuadExpr, A[i,j]*x[j])
+        for k in 1:n
+            tmp = convert(QuadExpr, lhs[i,k]*rhs[k,j])
+            if !_iszero(tmp)
                 append!(q.qvars1, tmp.qvars1)
                 append!(q.qvars2, tmp.qvars2)
                 append!(q.qcoeffs, tmp.qcoeffs)
@@ -343,10 +351,35 @@ function multiply!(ret::Array{QuadExpr}, A, x)
                 q.aff.constant += tmp.aff.constant
             end
         end
-        ret[i] = q
+        ret[i,j] = q
     end
     return ret
 end
+
+# function multiply!(ret::Array{QuadExpr}, A, x)
+#     m, n = size(A,1), size(A,2)
+#     for i in 1:m
+#         q = QuadExpr()
+#         sizehint!(q.qvars2, n)
+#         sizehint!(q.qvars2, n)
+#         sizehint!(q.qcoeffs, n)
+#         sizehint!(q.aff.vars, n)
+#         sizehint!(q.aff.coeffs, n)
+#         for j in 1:n
+#             if !_iszero(A[i,j])
+#                 tmp = convert(QuadExpr, A[i,j]*x[j])
+#                 append!(q.qvars1, tmp.qvars1)
+#                 append!(q.qvars2, tmp.qvars2)
+#                 append!(q.qcoeffs, tmp.qcoeffs)
+#                 append!(q.aff.coeffs, tmp.aff.coeffs)
+#                 append!(q.aff.vars, tmp.aff.vars)
+#                 q.aff.constant += tmp.aff.constant
+#             end
+#         end
+#         ret[i] = q
+#     end
+#     return ret
+# end
 
 typealias JuMPTypes Union(Variable,AffExpr,QuadExpr)
 
