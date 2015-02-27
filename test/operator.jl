@@ -440,10 +440,10 @@ context("Vectorized comparisons") do
     A = [1 2 3
          0 4 5
          6 0 7]
-    @addConstraint(m, x'*A*x >= 1)
+    @addConstraint(m, x'*A*x .>= 1)
     @fact TestHelper.vec_eq(m.quadconstr[1].terms, [x[1]*x[1] + 2x[1]*x[2] + 4x[2]*x[2] + 9x[1]*x[3] + 5x[2]*x[3] + 7x[3]*x[3] - 1]) => true
-    @fact m.quadconstr[1].sense => :(>=)
-    @addConstraint(m, (x'A)' + 2A*x <= 1)
+    @fact m.quadconstr[1].sense => :(.>=)
+    @addConstraint(m, (x'A)' + 2A*x .<= 1)
     terms = map(v->v.terms, m.linconstr)
     lbs   = map(v->v.lb, m.linconstr)
     ubs   = map(v->v.ub, m.linconstr)

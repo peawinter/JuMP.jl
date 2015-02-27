@@ -110,17 +110,26 @@ function assert_validmodel(m, macrocode)
     end
 end
 
-
-const valid_senses = [:(<=), :≤, :(>=), :≥, :(==)]
 function _canonicalize_sense(sns::Symbol)
-    sns in valid_senses || error("Invalid sense $sense")
-    return (sns == :≤ ? :(<=) :
-            sns == :≥ ? :(>=) : sns)
+    if sns == :(==)
+        return (:(==),false)
+    elseif sns == :(>=) || sns == :(≥)
+        return (:(>=),false)
+    elseif sns == :(<=) || sns == :(≤)
+        return (:(<=),false)
+    elseif sns == :(.==)
+        return (:(==),true)
+    elseif sns == :(.>=) || sns == :(.≥)
+        return (:(>=),true)
+    elseif sns == :(.<=) || sns == :(.≤)
+        return (:(<=),true)
+    else
+        error("Unrecognized sense $sns")
+    end
 end
 
 _construct_constraint!(v::Variable, sense::Symbol) = _construct_constraint(convert(AffExpr,v), sense)
 function _construct_constraint!(aff::AffExpr, sense::Symbol)
-    sense in valid_senses || error("Unrecognized sense $sense")
     offset = aff.constant
     aff.constant = 0.0
     if sense == :(<=) || sense == :≤
@@ -134,10 +143,7 @@ function _construct_constraint!(aff::AffExpr, sense::Symbol)
     end
 end
 
-function _construct_constraint!(quad::QuadExpr, sense::Symbol)
-    sense in valid_senses || error("Invalid sense $sense in quadratic constraint")
-    return QuadConstraint(quad, sense)
-end
+_construct_constraint!(quad::QuadExpr, sense::Symbol) = QuadConstraint(quad, sense)
 
 _construct_constraint!(x::Array, sense::Symbol) = map(c->_construct_constraint!(c,sense), x)
 
@@ -162,21 +168,24 @@ macro addConstraint(m, x, extra...)
     # Build the constraint
     if length(x.args) == 3
         # Simple comparison - move everything to the LHS
-        sense = _canonicalize_sense(x.args[2])
-        sense in valid_senses ||
-            error("in @addConstraint ($(string(x))): expected comparison operator (<=, >=, or ==).")
+        (sense,vectorized) = _canonicalize_sense(x.args[2])
         lhs = :($(x.args[1]) - $(x.args[3]))
+        addconstr = (vectorized ? :addVectorizedConstraint : :addConstraint)
         newaff, parsecode = parseExprToplevel(lhs, :q)
         code = quote
             q = AffExpr()
             $parsecode
-            $(refcall) = addConstraint($m, _construct_constraint!($newaff,$(quot(sense))))
+            $(refcall) = $addconstr($m, _construct_constraint!($newaff,$(quot(sense))))
         end
     elseif length(x.args) == 5
         # Ranged row
-        if (x.args[2] != :<= && x.args[2] != :≤) || (x.args[4] != :<= && x.args[4] != :≤)
+        (lsign,lvectorized) = _canonicalize_sense(x.args[2])
+        (rsign,rvectorized) = _canonicalize_sense(x.args[4])
+        if (lsign != :(<=)) || (rsign != :(<=))
             error("in @addConstraint ($(string(x))): only ranged rows of the form lb <= expr <= ub are supported.")
         end
+        lvectorized == rvectorized || error("in @addConstraint ($(string(x))): signs are inconsistently vectorized")
+        addconstr = (lvectorized ? :addVectorizedConstraint : :addConstraint)
         lb = x.args[1]
         ub = x.args[5]
         newaff, parsecode = parseExprToplevel(x.args[3],:aff)
@@ -190,7 +199,7 @@ macro addConstraint(m, x, extra...)
             isa($newaff,AffExpr) || (eltype($newaff) == AffExpr) || error("Ranged quadratic constraints are not allowed")
             offset = $newaff.constant
             $newaff.constant = 0.0
-            $(refcall) = addConstraint($m, LinearConstraint($newaff,$(esc(lb))-offset,$(esc(ub))-offset))
+            $(refcall) = $addconstr($m, LinearConstraint($newaff,$(esc(lb))-offset,$(esc(ub))-offset))
         end
     else
         # Unknown
@@ -208,22 +217,27 @@ macro LinearConstraint(x)
         error("in @LinearConstraint ($(string(x))): expected comparison operator (<=, >=, or ==).")
 
     if length(x.args) == 3
-        sense = _canonicalize_sense(x.args[2])
+        (sense,vectorized) = _canonicalize_sense(x.args[2])
         # Simple comparison - move everything to the LHS
-        sense in valid_senses ||
-            error("in @LinearConstraint ($(string(x))): expected comparison operator (<=, >=, or ==).")
+        vectorized &&
+            error("in @LinearConstraint ($(string(x))): Cannot add vectorized constraints")
         lhs = :($(x.args[1]) - $(x.args[3]))
         return quote
             newaff = @defExpr($(esc(lhs)))
             c = _construct_constraint!(newaff,$(quot(sense)))
-            isa(c, LinearConstraint) || error("Constraint in @LinearConstraint is really a $(typeof(c))")
+            isa(c, LinearConstraint) ||
+                error("Constraint in @LinearConstraint is really a $(typeof(c))")
             c
         end
     elseif length(x.args) == 5
         # Ranged row
-        if (x.args[2] != :<= && x.args[2] != :≤) || (x.args[4] != :<= && x.args[4] != :≤)
+        (lsense,lvectorized) = _canonicalize_sense(x.args[2])
+        (rsense,rvectorized) = _canonicalize_sense(x.args[4])
+        if (lsense != :<=) || (rsense != :<=)
             error("in @addConstraint ($(string(x))): only ranged rows of the form lb <= expr <= ub are supported.")
         end
+        (lvectorized || rvectorized) &&
+            error("in @LinearConstraint ($(string(x))): Cannot add vectorized constraints")
         lb = x.args[1]
         ub = x.args[5]
         return quote
@@ -253,10 +267,10 @@ macro QuadConstraint(x)
         error("in @QuadConstraint ($(string(x))): expected comparison operator (<=, >=, or ==).")
 
     if length(x.args) == 3
-        sense = _canonicalize_sense(x.args[2])
+        (sense,vectorized) = _canonicalize_sense(x.args[2])
         # Simple comparison - move everything to the LHS
-        sense in valid_senses ||
-            error("in @QuadConstraint ($(string(x))): expected comparison operator (<=, >=, or ==).")
+        vectorized &&
+            error("in @QuadConstraint ($(string(x))): Cannot add vectorized constraints")
         lhs = :($(x.args[1]) - $(x.args[3]))
         return quote
             newaff = @defExpr($(esc(lhs)))
