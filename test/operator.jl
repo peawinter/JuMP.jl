@@ -442,26 +442,51 @@ context("Vectorized comparisons") do
          6 0 7]
     @addConstraint(m, x'*A*x .>= 1)
     @fact TestHelper.vec_eq(m.quadconstr[1].terms, [x[1]*x[1] + 2x[1]*x[2] + 4x[2]*x[2] + 9x[1]*x[3] + 5x[2]*x[3] + 7x[3]*x[3] - 1]) => true
-    @fact m.quadconstr[1].sense => :(.>=)
-    @addConstraint(m, (x'A)' + 2A*x .<= 1)
-    terms = map(v->v.terms, m.linconstr)
-    lbs   = map(v->v.lb, m.linconstr)
-    ubs   = map(v->v.ub, m.linconstr)
-    @fact TestHelper.vec_eq(terms, -[ 3x[1] + 12x[3] +  4x[2] - 1
-                                 2x[1] + 12x[2] + 10x[3] - 1
-                                15x[1] +  5x[2] + 21x[3] - 1]) => true
-    @fact lbs => fill(Inf, 3)
-    @fact ubs => fill(  0, 3)
+    @fact m.quadconstr[1].sense => :(>=)
 
-    # @addConstraint(m, -1 <= (x'A)' + 2A*x <= 1)
-    # terms = map(v->v.terms, m.linconstr)
-    # lbs   = map(v->lb, m.linconstr)
-    # ubs   = map(v->ub, m.linconstr)
-    # @fact TestHelper.vec_eq(m.linconstr, [ 3x[1] + 12x[3] +  4x[2]
-    #                             2x[1] + 12x[2] + 10x[3]
-    #                            15x[1] +  5x[2] + 21x[3]]) => true
-    # @fact lbs => fill(-1, 3)
-    # @fact ubs => fill( 1, 3)
+    mat = [ 3x[1] + 12x[3] +  4x[2]
+            2x[1] + 12x[2] + 10x[3]
+           15x[1] +  5x[2] + 21x[3]]
+
+    @addConstraint(m, (x'A)' + 2A*x .<= 1)
+    terms = map(v->v.terms, m.linconstr[1:3])
+    lbs   = map(v->v.lb,    m.linconstr[1:3])
+    ubs   = map(v->v.ub,    m.linconstr[1:3])
+    @fact TestHelper.vec_eq(terms, mat) => true
+    @fact lbs => fill(-Inf, 3)
+    @fact ubs => fill(   1, 3)
+
+    @addConstraint(m, -1 .<= (x'A)' + 2A*x .<= 1)
+    terms = map(v->v.terms, m.linconstr[4:6])
+    lbs   = map(v->v.lb,    m.linconstr[4:6])
+    ubs   = map(v->v.ub,    m.linconstr[4:6])
+    @fact TestHelper.vec_eq(terms, mat) => true
+    @fact lbs => fill(-1, 3)
+    @fact ubs => fill( 1, 3)
+
+    @addConstraint(m, -[1:3;] .<= (x'A)' + 2A*x .<= 1)
+    terms = map(v->v.terms, m.linconstr[7:9])
+    lbs   = map(v->v.lb,    m.linconstr[7:9])
+    ubs   = map(v->v.ub,    m.linconstr[7:9])
+    @fact TestHelper.vec_eq(terms, mat) => true
+    @fact lbs => -[1:3;]
+    @fact ubs => fill( 1, 3)
+
+    @addConstraint(m, -[1:3;] .<= (x'A)' + 2A*x .<= [3:-1:1;])
+    terms = map(v->v.terms, m.linconstr[10:12])
+    lbs   = map(v->v.lb,    m.linconstr[10:12])
+    ubs   = map(v->v.ub,    m.linconstr[10:12])
+    @fact TestHelper.vec_eq(terms, mat) => true
+    @fact lbs => -[1:3;]
+    @fact ubs => [3:-1:1;]
+
+    @addConstraint(m, -[1:3;] .<= (x'A)' + 2A*x .<= 3)
+    terms = map(v->v.terms, m.linconstr[13:15])
+    lbs   = map(v->v.lb,    m.linconstr[13:15])
+    ubs   = map(v->v.ub,    m.linconstr[13:15])
+    @fact TestHelper.vec_eq(terms, mat) => true
+    @fact lbs => -[1:3;]
+    @fact ubs => fill(3,3)
 end
 
 end
