@@ -448,6 +448,7 @@ for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]
         $op{T,N}(lhs::JuMPArray{T,N,true},rhs::Real) = $op(lhs.innerArray, rhs)
         $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = error()
         $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = error()
+
         $dotop(lhs::Real,rhs::JuMPTypes) = $op(lhs,rhs)
         $dotop(lhs::JuMPTypes,rhs::Real) = $op(rhs,rhs)
         $dotop{T<:JuMPTypes}(lhs::Real,rhs::Array{T}) = map(c->$op(lhs,c), rhs)
@@ -468,6 +469,8 @@ for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]
         $dotop{T,R,N}(lhs::JuMPArray{T,N,true},rhs::JuMPArray{R,N,true}) = $op(lhs.innerArray,rhs.innerArray)
     end
 end
+(.*)(lhs::Array{Variable},rhs::Array{AffExpr}) =
+
 (-){N}(x::Array{Variable,N}) = (-)(convert(Array{AffExpr,N},x))
 (-){T,N}(x::JuMPArray{T,N,true}) = (-)(x.innerArray)
 

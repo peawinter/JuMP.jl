@@ -10,14 +10,14 @@ function addToExpression{T<:VectTypes}(x::AffExpr, y::Array{T}, z::Real)
 end
 function addToExpression{T<:VectTypes,R<:VectTypes}(x::AffExpr, y::Array{T}, z::Array{R})
     (isempty(x.vars) && isempty(x.coeffs)) || error("Cannot add an affine expression to Array{$T}")
-    return x.constant + y.*z
+    return x.constant + y*z
 end
 
-addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::S) = (x .+ y.*z)
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::S) = (x .+ y*z)
 addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::Array{R},z::S) = (x .+ y.*z)
 addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::Array{S}) = (x .+ y.*z)
 addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::Array{S}) = (x .+ y.*z)
-addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::Array{R},z::Array{S}) = (x .+ y.*z)
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::Array{R},z::Array{S}) = (x .+ y*z)
 
 addToExpression{T<:Real,R<:VectTypes,S<:VectTypes}(x::T,y::Array{R},z::S) = (x .+ y.*z)
 addToExpression{T<:Real,R<:VectTypes,S<:VectTypes}(x::T,y::R,z::Array{S}) = (x .+ y.*z)
