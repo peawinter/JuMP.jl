@@ -495,7 +495,7 @@ end
 facts("[model] Test MIQP vectorization") do
     n = 1000
     p = 4
-    function bestsubset(solver,X,y,K,M,integer=true)
+    function bestsubset(solver,X,y,K,M,integer)
         mod = Model(solver=solver)
         @defVar(mod, β[1:p])
         if integer
@@ -503,8 +503,6 @@ facts("[model] Test MIQP vectorization") do
         else
             @defVar(mod, 0 <= z[1:p] <= 1)
         end
-        @setObjective(mod, Min, sum((y-X*β).^2))
-        # or maybe
         @setObjective(mod, Min, (y-X*β)'*(y-X*β) )
         @addConstraint(mod, eye(p)*β .<=  M*eye(p)*z)
         @addConstraint(mod, eye(p)*β .>= -M*eye(p)*z)
@@ -512,16 +510,14 @@ facts("[model] Test MIQP vectorization") do
         solve(mod)
         return getValue(β)[:]
     end
-    # for solver in ip_solvers
-    #     srand(1000)
-    #     X = rand(n,p)
-    #     y = X * [100, 50, 10, 1] + 20*randn(n)
-    #     @fact bestsubset(solver,X,y,2,500) => roughly([106.25,53.7799,0.0,0.0], 1e-6)
-    # end
+    include(joinpath("data","miqp_vector.jl")) # loads X and q
+    y = X * [100, 50, 10, 1] + 20*q
+    for solver in quad_solvers
+        @fact bestsubset(solver,X,y,2,500,false) => roughly([101.789,49.414,8.63904,1.72663], 1e-6)
+    end
     for solver in quad_mip_solvers
-        include(joinpath("data","miqp_vector.jl")) # loads X and q
         y = X * [100, 50, 10, 1] + 20*q
-        @fact bestsubset(solver,X,y,2,500) => roughly([106.25,53.7799,0.0,0.0], 1e-6)
+        @fact bestsubset(solver,X,y,2,500,true) => roughly([106.25,53.7799,0.0,0.0], 1e-6)
     end
 end
 
