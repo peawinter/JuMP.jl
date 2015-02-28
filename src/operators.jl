@@ -440,38 +440,48 @@ function (*){T,R<:JuMPTypes}(A::Array{R,2}, x::Array{T,2})
     return ret
 end
 
-for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]
+for op in [:+, :-, :*]
     @eval begin
         $op{T<:JuMPTypes}(lhs::Real,rhs::Array{T}) = map(c->$op(lhs,c), rhs)
         $op{T<:JuMPTypes}(lhs::Array{T},rhs::Real) = map(c->$op(c,rhs), lhs)
         $op{T,N}(lhs::Real,rhs::JuMPArray{T,N,true}) = $op(lhs, rhs.innerArray)
         $op{T,N}(lhs::JuMPArray{T,N,true},rhs::Real) = $op(lhs.innerArray, rhs)
-        $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = error()
-        $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = error()
+        # $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = error()
+        # $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = error()
 
+        $op{T<:JuMPTypes,R,N}(lhs::Array{T,N},rhs::JuMPArray{R,N,true}) = $op(lhs,rhs.innerArray)
+        $op{T<:JuMPTypes,R,N}(lhs::JuMPArray{R,N,true},rhs::Array{T,N}) = $op(lhs.innerArray,rhs)
+        $op{T,R,N}(lhs::JuMPArray{T,N,true},rhs::JuMPArray{R,N,true}) = $op(lhs.innerArray,rhs.innerArray)
+    end
+end
+
+(/){T<:JuMPTypes}(lhs::Array{T},rhs::Real) = map(c->$op(c,rhs), lhs)
+(/){T,N}(lhs::JuMPArray{T,N,true},rhs::Real) = $op(lhs.innerArray, rhs)
+# (/){T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = error()
+
+for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*), (:./,:+)]
+    @eval begin
         $dotop(lhs::Real,rhs::JuMPTypes) = $op(lhs,rhs)
         $dotop(lhs::JuMPTypes,rhs::Real) = $op(rhs,rhs)
         $dotop{T<:JuMPTypes}(lhs::Real,rhs::Array{T}) = map(c->$op(lhs,c), rhs)
         $dotop{T<:JuMPTypes}(lhs::Array{T},rhs::Real) = map(c->$op(c,rhs), lhs)
         $dotop{T,N}(lhs::Real,rhs::JuMPArray{T,N,true}) = $dotop(lhs, rhs.innerArray)
         $dotop{T,N}(lhs::JuMPArray{T,N,true},rhs::Real) = $dotop(lhs.innerArray, rhs)
-        $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = [$op(lhs,v) for v in rhs]
-        $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = [$op(v,rhs) for v in lhs]
-    end
-end
-for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]
-    @eval begin
-        $op{T<:JuMPTypes,R,N}(lhs::Array{T,N},rhs::JuMPArray{R,N,true}) = $op(lhs,rhs.innerArray)
-        $op{T<:JuMPTypes,R,N}(lhs::JuMPArray{R,N,true},rhs::Array{T,N}) = $op(lhs.innerArray,rhs)
-        $op{T,R,N}(lhs::JuMPArray{T,N,true},rhs::JuMPArray{R,N,true}) = $op(lhs.innerArray,rhs.innerArray)
+        $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = map(c->$op(lhs,c), rhs)
+        $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = map(c->$op(c,rhs), lhs)
+
         $dotop{T<:JuMPTypes,R,N}(lhs::Array{T,N},rhs::JuMPArray{R,N,true}) = $op(lhs,rhs.innerArray)
         $dotop{T<:JuMPTypes,R,N}(lhs::JuMPArray{R,N,true},rhs::Array{T,N}) = $op(lhs.innerArray,rhs)
         $dotop{T,R,N}(lhs::JuMPArray{T,N,true},rhs::JuMPArray{R,N,true}) = $op(lhs.innerArray,rhs.innerArray)
     end
 end
-
+(+){T<:JuMPTypes}(x::Array{T}) = x
+(+){T,N}(x::JuMPArray{T,N,true}) = x.innerArray
 (-)(x::Array{Variable}) = (-)(convert(Array{AffExpr},x))
 (-){T,N}(x::JuMPArray{T,N,true}) = -x.innerArray
+(*){T<:JuMPTypes}(x::Array{T}) = x
+(*){T,N}(x::JuMPArray{T,N,true}) = x.innerArray
+
 
 #############################################################################
 # JuMPDict comparison operators (all errors)
