@@ -446,16 +446,16 @@ for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]
         $op{T<:JuMPTypes}(lhs::Array{T},rhs::Real) = map(c->$op(c,rhs), lhs)
         $op{T,N}(lhs::Real,rhs::JuMPArray{T,N,true}) = $op(lhs, rhs.innerArray)
         $op{T,N}(lhs::JuMPArray{T,N,true},rhs::Real) = $op(lhs.innerArray, rhs)
-        # $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = error()
-        # $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = error()
+        $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = error()
+        $op{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = error()
         $dotop(lhs::Real,rhs::JuMPTypes) = $op(lhs,rhs)
         $dotop(lhs::JuMPTypes,rhs::Real) = $op(rhs,rhs)
         $dotop{T<:JuMPTypes}(lhs::Real,rhs::Array{T}) = map(c->$op(lhs,c), rhs)
         $dotop{T<:JuMPTypes}(lhs::Array{T},rhs::Real) = map(c->$op(c,rhs), lhs)
         $dotop{T,N}(lhs::Real,rhs::JuMPArray{T,N,true}) = $dotop(lhs, rhs.innerArray)
         $dotop{T,N}(lhs::JuMPArray{T,N,true},rhs::Real) = $dotop(lhs.innerArray, rhs)
-        # $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = [$op(lhs,v) for v in rhs]
-        # $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = [$op(v,rhs) for v in lhs]
+        $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::T,rhs::Array{S}) = [$op(lhs,v) for v in rhs]
+        $dotop{T<:JuMPTypes,S<:JuMPTypes}(lhs::Array{T},rhs::S) = [$op(v,rhs) for v in lhs]
     end
 end
 for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]

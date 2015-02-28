@@ -1,39 +1,33 @@
-# addToExpression(x, y::Vector{Variable}, z) = addToExpression(x, z, y)
-# addToExpression(x, y, z::Vector{Variable}) = addToExpression(x, y, convert(AffExpr,z))
-
-addToExpression{T}(x, y::Real, z::JuMPArray{T,1,true}) = addToExpression(x, y, z.innerArray)
-
-addToExpression{T}(x, y::JuMPArray{T,1,true}, z::Real) = addToExpression(x, y.innerArray, z)
-
 typealias VectTypes Union(JuMPTypes,Real)
-
-addToExpression(x, y, z::SparseMatrixCSC) = addToExpression(x, y, full(z)) # lol
-addToExpression(x, y::SparseMatrixCSC, z::SparseMatrixCSC) = addToExpression(x, full(y), full(z))
-addToExpression(x, y::SparseMatrixCSC, z) = addToExpression(x, full(y), z)
-
-addToExpression{T<:JuMPTypes}(x::Vector{T}, y::Real, z::Real) = (x + y*z)
-
-function addToExpression{T<:JuMPTypes,N}(x::Number, y::Real, z::Array{T,N})
-    v = convert(Array{promote_type(T,AffExpr),N}, copy(z)) # lift T=Variable to AffExpr
-    return x + y.*v
-end
-
-addToExpression{R<:Number}(x::Number, y::Real, z::Array{R}) = x + y.*z
-
-addToExpression{T<:VectTypes}(x::Array{T}, y::Real, z::Real) = x + (y*z)
-
-# function addToExpression{T<:VectTypes}(x, y::Real, z::Array{T})
-    # sz = size(z)
-    # all(x->(x==1), sz[2:end]) || error("Cannot handle matrix constraints") # trim trailing singleton dimensions
-    # addToExpression(x, y, reshape(copy(z), sz[1]))
-# end
-
-function addToExpression{T<:VectTypes,S<:VectTypes}(x::Array{T}, y::Real, z::Array{S})
-    length(x) == length(z) || throw(DimensionMismatch("+"))
-    return x + y.*z
-end
 
 function addToExpression{T<:VectTypes}(x::AffExpr, y::Real, z::Array{T})
     (isempty(x.vars) && isempty(x.coeffs)) || error("Cannot add an affine expression to Array{$T}")
     return x.constant + y.*z
 end
+function addToExpression{T<:VectTypes}(x::AffExpr, y::Array{T}, z::Real)
+    (isempty(x.vars) && isempty(x.coeffs)) || error("Cannot add an affine expression to Array{$T}")
+    return x.constant + y.*z
+end
+function addToExpression{T<:VectTypes,R<:VectTypes}(x::AffExpr, y::Array{T}, z::Array{R})
+    (isempty(x.vars) && isempty(x.coeffs)) || error("Cannot add an affine expression to Array{$T}")
+    return x.constant + y.*z
+end
+
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::S) = (x .+ y.*z)
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::Array{R},z::S) = (x .+ y.*z)
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::Array{S}) = (x .+ y.*z)
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::R,z::Array{S}) = (x .+ y.*z)
+addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::Array{R},z::Array{S}) = (x .+ y.*z)
+
+addToExpression{T<:Real,R<:VectTypes,S<:VectTypes}(x::T,y::Array{R},z::S) = (x .+ y.*z)
+addToExpression{T<:Real,R<:VectTypes,S<:VectTypes}(x::T,y::R,z::Array{S}) = (x .+ y.*z)
+
+addToExpression{T,N}(x, y, z::JuMPArray{T,N,true}) = addToExpression(x, y, z.innerArray)
+addToExpression{T,M,R,N}(x, y::JuMPArray{T,M,true}, z::JuMPArray{R,N,true}) = addToExpression(x, y.innerArray, z.innerArray)
+addToExpression{T,N}(x, y::JuMPArray{T,N,true}, z) = addToExpression(x, y.innerArray, z)
+
+addToExpression{T,N}(x, y::JuMPArray{T,N,true}, z::SparseMatrixCSC) = addToExpression(x, y.innerArray, full(z))
+addToExpression(x, y, z::SparseMatrixCSC) = addToExpression(x, y, full(z)) # lol
+addToExpression(x, y::SparseMatrixCSC, z::SparseMatrixCSC) = addToExpression(x, full(y), full(z))
+addToExpression{T,N}(x, y::SparseMatrixCSC, z::JuMPArray{T,N,true}) = addToExpression(x, full(y), z.innerArray)
+addToExpression(x, y::SparseMatrixCSC, z) = addToExpression(x, full(y), z)
