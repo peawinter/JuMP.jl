@@ -163,6 +163,8 @@ parseExprToplevel(x, aff::Symbol) = parseExpr(x, aff, [1.0])
 parseExpr(x, aff::Symbol, constantCoef::Vector) = parseExpr(x, aff, Expr(:call,:*,constantCoef...))
 
 function parseExpr(x, aff::Symbol, constantCoef::Union(Number, Expr))
+    # @show x
+    # @show constantCoef
     if !isa(x,Expr)
         # at the lowest level
         return aff, :($aff = addToExpression($aff, $(esc(constantCoef)), $(esc(x))))
@@ -179,7 +181,7 @@ function parseExpr(x, aff::Symbol, constantCoef::Union(Number, Expr))
         elseif x.head == :call && x.args[1] == :*
             coef = timescoef(x)
             var = timesvar(x)
-            return parseExpr(var, aff, :($coef*$constantCoef))
+            return parseExpr(var, aff, :($constantCoef*$coef))
         elseif x.head == :call && x.args[1] == :/
             @assert length(x.args) == 3
             numerator = x.args[2]
