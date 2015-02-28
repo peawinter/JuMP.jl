@@ -469,10 +469,9 @@ for (dotop,op) in [(:.+,:+), (:.-,:-), (:.*,:*)]
         $dotop{T,R,N}(lhs::JuMPArray{T,N,true},rhs::JuMPArray{R,N,true}) = $op(lhs.innerArray,rhs.innerArray)
     end
 end
-(.*)(lhs::Array{Variable},rhs::Array{AffExpr}) =
 
-(-){N}(x::Array{Variable,N}) = (-)(convert(Array{AffExpr,N},x))
-(-){T,N}(x::JuMPArray{T,N,true}) = (-)(x.innerArray)
+(-)(x::Array{Variable}) = (-)(convert(Array{AffExpr},x))
+(-){T,N}(x::JuMPArray{T,N,true}) = -x.innerArray
 
 #############################################################################
 # JuMPDict comparison operators (all errors)
