@@ -384,6 +384,8 @@ Base.one{C,V}(::Type{GenericQuadExpr{C,V}})  = GenericQuadExpr(V[], V[], C[], ze
 Base.zero(q::GenericQuadExpr) = zero(typeof(q))
 Base.one(q::GenericQuadExpr)  = one(typeof(q))
 
+Base.convert(::Type{QuadExpr}, v::Union(Real,Variable,AffExpr)) = QuadExpr(Variable[], Variable[], Float64[], AffExpr(v))
+
 function assert_isfinite(q::GenericQuadExpr)
     assert_isfinite(q.aff)
     for i in 1:length(q.qcoeffs)
@@ -693,6 +695,7 @@ end
 ##########################################################################
 # Operator overloads
 include("operators.jl")
+include("concatenation.jl")
 # Writers - we support MPS (MILP + QuadObj), LP (MILP)
 include("writers.jl")
 # Solvers
