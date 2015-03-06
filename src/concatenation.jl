@@ -1,20 +1,19 @@
 import Base: promote_rule, promote_type, cat_t, hcat, vcat, hvcat
 
 type DummyJuMPArray end
-typealias JuMPOneArray{T,N} JuMPArray{T,N,true}
 
-Base.promote_rule{T<:JuMPOneArray}(::Type{T},::Type{Union()}) = DummyJuMPArray
-Base.promote_rule{T<:JuMPOneArray,S<:JuMPOneArray}(::Type{T},::Type{S}) = DummyJuMPArray
-Base.promote_rule{T<:JuMPOneArray,S}(::Type{T},::Type{S}) = DummyJuMPArray
+Base.promote_rule{T<:OneIndexedArray}(::Type{T},::Type{Union()}) = DummyJuMPArray
+Base.promote_rule{T<:OneIndexedArray,S<:OneIndexedArray}(::Type{T},::Type{S}) = DummyJuMPArray
+Base.promote_rule{T<:OneIndexedArray,S}(::Type{T},::Type{S}) = DummyJuMPArray
 
-Base.promote_type{T<:JuMPOneArray}(::Type{T},::Type{Union()}) = DummyJuMPArray
-Base.promote_type{T<:JuMPOneArray}(::Type{Union()},::Type{T}) = DummyJuMPArray
-Base.promote_type{T<:JuMPOneArray}(::Type{T},::Type{T}) = DummyJuMPArray
-Base.promote_type{T<:JuMPOneArray,S<:JuMPOneArray}(::Type{T},::Type{S}) = DummyJuMPArray
-Base.promote_type{T<:JuMPOneArray,S}(::Type{T},::Type{S}) = DummyJuMPArray
+Base.promote_type{T<:OneIndexedArray}(::Type{T},::Type{Union()}) = DummyJuMPArray
+Base.promote_type{T<:OneIndexedArray}(::Type{Union()},::Type{T}) = DummyJuMPArray
+Base.promote_type{T<:OneIndexedArray}(::Type{T},::Type{T}) = DummyJuMPArray
+Base.promote_type{T<:OneIndexedArray,S<:OneIndexedArray}(::Type{T},::Type{S}) = DummyJuMPArray
+Base.promote_type{T<:OneIndexedArray,S}(::Type{T},::Type{S}) = DummyJuMPArray
 
 _tofull(x) = x
-_tofull{T,N}(x::JuMPArray{T,N,true}) = x.innerArray
+_tofull(x::OneIndexedArray) = x.innerArray
 
 function Base.cat_t(catdims, ::Type{DummyJuMPArray}, X...)
     Y = map(_tofull, X)
@@ -22,6 +21,6 @@ function Base.cat_t(catdims, ::Type{DummyJuMPArray}, X...)
     cat_t(catdims, T, Y...)
 end
 
-Base.hcat(X::JuMPOneArray...) = hcat([_tofull(x) for x in X]...)
-Base.vcat(X::JuMPOneArray...) = vcat([_tofull(x) for x in X]...)
-Base.hvcat(rows::(Int...), X::JuMPOneArray...) = hvcat(rows, [_tofull(x) for x in X]...)
+Base.hcat(X::OneIndexedArray...) = hcat([_tofull(x) for x in X]...)
+Base.vcat(X::OneIndexedArray...) = vcat([_tofull(x) for x in X]...)
+Base.hvcat(rows::(Int...), X::OneIndexedArray...) = hvcat(rows, [_tofull(x) for x in X]...)

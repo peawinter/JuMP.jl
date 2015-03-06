@@ -3,6 +3,7 @@ using Base.Meta
 
 abstract JuMPContainer{T,N}
 abstract JuMPArray{T,N,Q} <: JuMPContainer{T,N} # Q is true if all index sets are of the form 1:n
+typealias OneIndexedArray{T,N} JuMPArray{T,N,true}
 
 type IndexPair
     idxvar

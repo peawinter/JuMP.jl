@@ -3,9 +3,9 @@ addToExpression(x, y::Vector{Variable}, z) = addToExpression(x, z, y)
 addToExpression(x::AffExpr, y::Number, z::Vector{Variable}) = addToExpression(x, y, convert(Vector{AffExpr},z))
 addToExpression(x::QuadExpr, y::Number, z::Vector{Variable}) = addToExpression(x, y, convert(Vector{AffExpr},z))
 addToExpression(x, y::Vector{Variable}, z::Vector{Variable}) = error()
-addToExpression{T}(x, y::Vector{Variable}, z::JuMPArray{T,1,true}) = error()
-addToExpression{T}(x, y::JuMPArray{T,1,true}, z::Vector{Variable}) = error()
-addToExpression{T,S}(x, y::JuMPArray{T,1,true}, z::JuMPArray{S,1,true}) = error()
+addToExpression(x, y::Vector{Variable}, z::OneIndexedArray) = error()
+addToExpression(x, y::OneIndexedArray, z::Vector{Variable}) = error()
+addToExpression(x, y::OneIndexedArray, z::OneIndexedArray) = error()
 
 addToExpression(x, y, z::Vector{Variable}) = addToExpression(x, y, convert(AffExpr,z))
 

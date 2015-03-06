@@ -22,12 +22,12 @@ addToExpression{T<:VectTypes,R<:VectTypes,S<:VectTypes}(x::Array{T},y::Array{R},
 addToExpression{T<:Real,R<:VectTypes,S<:VectTypes}(x::T,y::Array{R},z::S) = (x .+ y.*z)
 addToExpression{T<:Real,R<:VectTypes,S<:VectTypes}(x::T,y::R,z::Array{S}) = (x .+ y.*z)
 
-addToExpression{T,N}(x, y, z::JuMPArray{T,N,true}) = addToExpression(x, y, z.innerArray)
-addToExpression{T,M,R,N}(x, y::JuMPArray{T,M,true}, z::JuMPArray{R,N,true}) = addToExpression(x, y.innerArray, z.innerArray)
-addToExpression{T,N}(x, y::JuMPArray{T,N,true}, z) = addToExpression(x, y.innerArray, z)
+addToExpression(x, y, z::OneIndexedArray) = addToExpression(x, y, z.innerArray)
+addToExpression(x, y::OneIndexedArray, z::OneIndexedArray) = addToExpression(x, y.innerArray, z.innerArray)
+addToExpression(x, y::OneIndexedArray, z) = addToExpression(x, y.innerArray, z)
 
-addToExpression{T,N}(x, y::JuMPArray{T,N,true}, z::SparseMatrixCSC) = addToExpression(x, y.innerArray, full(z))
+addToExpression(x, y::OneIndexedArray, z::SparseMatrixCSC) = addToExpression(x, y.innerArray, full(z))
 addToExpression(x, y, z::SparseMatrixCSC) = addToExpression(x, y, full(z)) # lol
 addToExpression(x, y::SparseMatrixCSC, z::SparseMatrixCSC) = addToExpression(x, full(y), full(z))
-addToExpression{T,N}(x, y::SparseMatrixCSC, z::JuMPArray{T,N,true}) = addToExpression(x, full(y), z.innerArray)
+addToExpression(x, y::SparseMatrixCSC, z::OneIndexedArray) = addToExpression(x, full(y), z.innerArray)
 addToExpression(x, y::SparseMatrixCSC, z) = addToExpression(x, full(y), z)
