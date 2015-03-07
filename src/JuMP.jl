@@ -140,15 +140,15 @@ end
 setObjective(m::Model, something::Any) =
     error("in setObjective: needs three arguments: model, objective sense (:Max or :Min), and expression.")
 
-# Hacky little fallbacks so that arrays of length 1 act as scalars for adding constraints and setting objective
-function setObjective(m::Model, sense::Symbol, x::Array)
-    length(x) == 1 || error("in setObjective: no support for vectorized objective of size $(size(x))")
-    setObjective(m, sense, x[1])
-end
-function addConstraint(m::Model, x::Array)
-    length(x) == 1 || error("in addConstraint: vectorized constraints of size $(size(x)) must used elementwise 'dot' comparison operators (.>=, .<=, .==)")
-    addConstraint(m, x[1])
-end
+# # Hacky little fallbacks so that arrays of length 1 act as scalars for adding constraints and setting objective
+# function setObjective(m::Model, sense::Symbol, x::Array)
+#     length(x) == 1 || error("in setObjective: no support for vectorized objective of size $(size(x))")
+#     setObjective(m, sense, x[1])
+# end
+# function addConstraint(m::Model, x::Array)
+#     length(x) == 1 || error("in addConstraint: vectorized constraints of size $(size(x)) must used elementwise 'dot' comparison operators (.>=, .<=, .==)")
+#     addConstraint(m, x[1])
+# end
 
 function setSolver(m::Model, solver::MathProgBase.AbstractMathProgSolver)
     m.solver = solver

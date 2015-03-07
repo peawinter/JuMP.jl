@@ -350,6 +350,22 @@ facts("[model] Test column-wise modeling") do
     @fact solve(mod) => :Optimal
     @fact getValue(z1) => roughly(1.0, 1e-6)
     @fact getValue(z2) => roughly(1.0, 1e-6)
+
+    # do a vectorized version as well
+    mod = Model()
+    @defVar(mod, 0 <= x <= 1)
+    @defVar(mod, 0 <= y <= 1)
+    obj = [5,1]'*[x,y]
+    @setObjective(mod, Max, obj[1])
+    A = [1 1
+         2 1]
+    @addConstraint(mod, A*[x,y] .<= [6,7])
+    @defVar(mod, 0 <= z1 <= 0, 0.0, con, [1.0,-2.0]) # coverage for deprecated syntax
+    @defVar(mod, 0 <= z1 <= 1, objective=10.0, inconstraints=con, coefficients=[1.0,-2.0])
+    @defVar(mod, 0 <= z2 <= 1, objective=10.0, inconstraints=Any[con[i] for i in 1:2], coefficients=[1.0,-2.0])
+    @fact solve(mod) => :Optimal
+    @fact getValue(z1) => roughly(1.0, 1e-6)
+    @fact getValue(z2) => roughly(1.0, 1e-6)
 end
 
 facts("[model] Test all MPS paths") do
@@ -477,7 +493,8 @@ facts("[model] Test vectorized model creation") do
     @defVar(modV, x[1:10])
     @defVar(modV, y[1:7])
     @addConstraint(modV, A*x + B*y .<= 1)
-    @setObjective(modV, Max, (x'*2A')*(2A*x) + (B*2y)'*(B*(2y)))
+    obj = (x'*2A')*(2A*x) + (B*2y)'*(B*(2y))
+    @setObjective(modV, Max, obj[1])
 
     modS = Model()
     @defVar(modS, x[1:10])
@@ -503,7 +520,8 @@ facts("[model] Test MIQP vectorization") do
         else
             @defVar(mod, 0 <= z[1:p] <= 1)
         end
-        @setObjective(mod, Min, (y-X*β)'*(y-X*β) )
+        obj = (y-X*β)'*(y-X*β)
+        @setObjective(mod, Min, obj[1])
         @addConstraint(mod, eye(p)*β .<=  M*eye(p)*z)
         @addConstraint(mod, eye(p)*β .>= -M*eye(p)*z)
         @addConstraint(mod, sum(z) == K)

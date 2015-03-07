@@ -491,6 +491,45 @@ end
 
 end
 
+facts("[operator] JuMPArray concatenation") do
+    m = Model()
+    @defVar(m, x[1:3])
+    @defVar(m, y[1:3,1:3])
+    @defVar(m, z[1:1])
+    @defVar(m, w[1:1,1:3])
+
+    @fact TestHelper.vec_eq([x y], [x[1] y[1,1] y[1,2] y[1,3]
+                                    x[2] y[2,1] y[2,2] y[2,3]
+                                    x[3] y[3,1] y[3,2] y[3,3]]) => true
+
+    @fact TestHelper.vec_eq([x 2y+1], [x[1] 2y[1,1]+1 2y[1,2]+1 2y[1,3]+1
+                                       x[2] 2y[2,1]+1 2y[2,2]+1 2y[2,3]+1
+                                       x[3] 2y[3,1]+1 2y[3,2]+1 2y[3,3]+1]) => true
+
+    @fact TestHelper.vec_eq([1 x'], [1 x[1] x[2] x[3]]) => true
+    @fact TestHelper.vec_eq([2x;x], [2x[1],2x[2],2x[3],x[1],x[2],x[3]]) => true
+    # vcat on JuMPArray
+    @fact TestHelper.vec_eq([x;x], [x[1],x[2],x[3],x[1],x[2],x[3]]) => true
+    # hcat on JuMPArray
+    @fact TestHelper.vec_eq([x x], [x[1] x[1]
+                                    x[2] x[2]
+                                    x[3] x[3]]) => true
+    # hvcat on JuMPArray
+    tmp1 = [z w; x y]
+    tmp2 = [z[1] w[1,1] w[1,2] w[1,3]
+            x[1] y[1,1] y[1,2] y[1,3]
+            x[2] y[2,1] y[2,2] y[2,3]
+            x[3] y[3,1] y[3,2] y[3,3]]
+    @fact TestHelper.vec_eq(tmp1, tmp2) => true
+    tmp3 = [1 2x'
+            x 2y-x*x']
+    tmp4 = [1    2x[1]               2x[2]               2x[3]
+            x[1] -x[1]*x[1]+2y[1,1]  -x[1]*x[2]+2y[1,2]  -x[1]*x[3] + 2y[1,3]
+            x[2] -x[1]*x[2]+2y[2,1]  -x[2]*x[2]+2y[2,2]  -x[2]*x[3] + 2y[2,3]
+            x[3] -x[1]*x[3]+2y[3,1]  -x[2]*x[3]+2y[3,2]  -x[3]*x[3] + 2y[3,3]]
+    @fact TestHelper.vec_eq(tmp3, tmp4) => true
+end
+
 
 # The behavior in this test is no longer well-defined
 #let
