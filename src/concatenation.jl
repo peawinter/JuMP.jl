@@ -17,7 +17,8 @@ _tofull(x::OneIndexedArray) = x.innerArray
 
 function Base.cat_t(catdims, ::Type{DummyJuMPArray}, X...)
     Y = map(_tofull, X)
-    T = promote_type(map(x->isa(x,AbstractArray) ? eltype(x) : typeof(x), X)...)
+    T = promote_type(map(x->isa(x,AbstractArray) ? eltype(x) : typeof(x), Y)...)
+    @assert T != DummyJuMPArray
     cat_t(catdims, T, Y...)
 end
 
